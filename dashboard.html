@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Management System | Enterprise Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="static/style.css">
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem("talentpulse_theme") ||
+                (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            document.documentElement.setAttribute("data-theme", savedTheme);
+        })();
+    </script>
+</head>
+
+<body>
+
+    <!-- Ambient luminous gradients -->
+    <div class="ambient-glow orb-1"></div>
+    <div class="ambient-glow orb-2"></div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- ========================================================= -->
+    <!-- HEADER / NAVIGATION -->
+    <!-- ========================================================= -->
+    <header class="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="logo-title">HR Management</h1>
+                <p class="logo-subtitle">Oracle HR Enterprise Suite</p>
+            </div>
+        </div>
+
+        <div class="nav-right">
+            <!-- Theme Toggle Button -->
+            <button type="button" id="themeToggleBtn" class="theme-toggle-btn" title="Toggle color theme" aria-label="Toggle dark mode">
+                <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+
+            <div class="user-profile-badge">
+                <div class="user-avatar" id="userAvatar">
+                    AD
+                </div>
+                <div class="user-details">
+                    <span class="user-name" id="userNameDisplay">admin</span>
+                    <span class="role-pill role-admin" id="userRoleBadge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <span>Administrator</span>
+                    </span>
+                </div>
+            </div>
+
+            <a href="/logout" class="btn-logout" id="logoutBtn" title="Sign out of session">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span>Logout</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+
+        <!-- ========================================================= -->
+        <!-- EXECUTIVE OVERVIEW STAT CARDS -->
+        <!-- ========================================================= -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon stat-blue">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-label">Total Staff</span>
+                    <h3 class="stat-value" id="statTotalEmployees">--</h3>
+                    <span class="stat-sub">Across all departments</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon stat-purple">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-label">Departments</span>
+                    <h3 class="stat-value" id="statTotalDepartments">--</h3>
+                    <span class="stat-sub">Registered units</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon stat-amber">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 3h12"></path>
+                        <path d="M6 8h12"></path>
+                        <path d="M6 13l8.5 8"></path>
+                        <path d="M6 13h3a4.5 4.5 0 0 0 0-9"></path>
+                    </svg>
+                </div>
+                <div class="stat-content">
+                    <span class="stat-label">Average Salary</span>
+                    <h3 class="stat-value" id="statAvgSalary">--</h3>
+                    <span class="stat-sub">Monthly baseline</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- DATABASE CONSOLE (ADMIN ONLY) -->
+        <!-- ========================================================= -->
+        <details class="db-console" id="adminConsoleSection">
+            <summary>
+                <div class="console-summary-content">
+                    <div class="summary-left">
+                        <span class="terminal-dots">
+                            <span class="dot dot-red"></span>
+                            <span class="dot dot-yellow"></span>
+                            <span class="dot dot-green"></span>
+                        </span>
+                        <span class="console-title">Oracle SQL Terminal &amp; Schema Explorer</span>
+                    </div>
+                    <span class="console-toggle-badge">Click to Toggle Console</span>
+                </div>
+            </summary>
+
+            <div class="db-section db-layout">
+                <section class="schema-panel">
+                    <div class="panel-header schema-panel-header">
+                        <div class="panel-header-left">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M4 4h16v16H4z"></path>
+                                <path d="M4 10h16"></path>
+                                <path d="M10 4v16"></path>
+                            </svg>
+                            <h3 id="schemaHeading">Schema Metadata</h3>
+                        </div>
+                        <div class="schema-tabs">
+                            <button type="button" class="schema-tab active" data-table="EMPLOYEES"
+                                onclick="switchSchemaTable('EMPLOYEES')">EMPLOYEES</button>
+                            <button type="button" class="schema-tab" data-table="DEPARTMENTS"
+                                onclick="switchSchemaTable('DEPARTMENTS')">DEPARTMENTS</button>
+                        </div>
+                    </div>
+                    <div id="schemaViewer" class="table-container schema-container"></div>
+                </section>
+
+                <section class="terminal-panel">
+                    <div class="panel-header terminal-panel-header">
+                        <div class="panel-header-left">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="4 17 10 11 4 5"></polyline>
+                                <line x1="12" y1="19" x2="20" y2="19"></line>
+                            </svg>
+                            <h3>Direct SQL Execution</h3>
+                        </div>
+                        <span class="allowed-tables-pill"
+                            title="Only added columns can be modified or dropped. Tables and built-in columns are protected.">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            Allowed: EMPLOYEES &amp; DEPARTMENTS
+                        </span>
+                    </div>
+
+                    <textarea id="sqlCommand" rows="6" placeholder="-- Queries and DML: EMPLOYEES / DEPARTMENTS only.
+-- DDL: add, modify, or drop user-added columns only.
+-- Tables and original columns cannot be dropped or changed.
+ALTER TABLE EMPLOYEES ADD CUSTOM_FIELD VARCHAR2(100);
+ALTER TABLE EMPLOYEES MODIFY CUSTOM_FIELD VARCHAR2(200);
+ALTER TABLE EMPLOYEES DROP COLUMN CUSTOM_FIELD;"></textarea>
+
+                    <div class="terminal-actions">
+                        <button onclick="runSQL()" class="btn-execute">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                            </svg>
+                            Execute Statement
+                        </button>
+                    </div>
+
+                    <div id="sqlOutput" class="terminal-output"></div>
+                </section>
+            </div>
+        </details>
+
+        <!-- ========================================================= -->
+        <!-- EMPLOYEE DIRECTORY & TOOLBAR -->
+        <!-- ========================================================= -->
+        <section class="content-card">
+            <div class="section-toolbar">
+                <div class="toolbar-left">
+                    <h2 id="directoryHeading">Employee Directory <span class="badge-count" id="employeeCountBadge">0</span></h2>
+                    <p class="section-desc" id="directoryDesc">Manage, search, and update staff records across the enterprise.</p>
+                </div>
+
+                <div class="toolbar-right">
+                    <div class="search-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="employeeSearch" placeholder="Filter by name, title, dept..."
+                            oninput="filterEmployeeTable()">
+                    </div>
+
+                    <select id="departmentFilter" onchange="filterEmployeeTable()" class="select-filter">
+                        <option value="">All Departments</option>
+                    </select>
+
+                    <button onclick="openAddForm()" class="btn-primary" id="addEmployeeBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Add Employee</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- EMPLOYEE MODAL / FORM -->
+            <div id="employeeFormModal" class="modal-backdrop" onclick="handleModalBackdropClick(event)">
+                <div id="employeeForm" class="form-container modal-dialog">
+                    <div class="modal-header">
+                        <div class="modal-title-wrapper">
+                            <span class="modal-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                </svg>
+                            </span>
+                            <h3 id="formTitle">Add Employee</h3>
+                        </div>
+                        <button type="button" class="btn-close-modal" onclick="closeForm()">&times;</button>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="employee_id">Employee ID</label>
+                            <input type="number" id="employee_id" placeholder="e.g. 101" required>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="first_name">First Name</label>
+                            <input type="text" id="first_name" placeholder="e.g. Jane" required>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="last_name">Last Name</label>
+                            <input type="text" id="last_name" placeholder="e.g. Doe">
+                        </div>
+
+                        <div class="form-field">
+                            <label for="email">Work Email</label>
+                            <input type="email" id="email" placeholder="jane.doe@company.com">
+                        </div>
+
+                        <div class="form-field">
+                            <label for="phone">Phone Number</label>
+                            <input type="text" id="phone" placeholder="e.g. +91 98765 43210">
+                        </div>
+
+                        <div class="form-field">
+                            <label for="department">Assigned Department</label>
+                            <select id="department">
+                                <option value="">Select Department</option>
+                            </select>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="job_title">Job Title</label>
+                            <input type="text" id="job_title" placeholder="e.g. Software Engineer or HR Head">
+                        </div>
+
+                        <div class="form-field">
+                            <label for="salary">Salary (₹)</label>
+                            <input type="number" id="salary" placeholder="e.g. 75000">
+                        </div>
+
+                        <div class="form-field">
+                            <label for="hire_date">Date of Hire</label>
+                            <input type="date" id="hire_date">
+                        </div>
+                        <div id="employeeCustomFields" class="custom-fields-grid"></div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" onclick="closeForm()" class="btn-secondary cancel">
+                            Cancel
+                        </button>
+                        <button type="button" onclick="saveEmployee()" class="btn-primary">
+                            Save Employee Record
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EMPLOYEES TABLE -->
+            <div class="table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr id="employeeTableHeaders">
+                            <th>ID</th>
+                            <th>Employee Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Department</th>
+                            <th>Job Title</th>
+                            <th>Salary (₹)</th>
+                            <th>Annual Salary <br>(Derived)</th>
+                            <th>Hire Date</th>
+                            <th>Since Hire <br>(Derived)</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeTable"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- DEPARTMENTS DIRECTORY (ADMIN ONLY) -->
+        <!-- ========================================================= -->
+        <section class="content-card department-management" id="adminDepartmentSection">
+            <div class="section-toolbar">
+                <div class="toolbar-left">
+                    <h2>Department Directory <span class="badge-count" id="deptCountBadge">0</span></h2>
+                    <p class="section-desc">Manage corporate departments, staffing levels, and designated department
+                        heads.</p>
+                </div>
+
+                <div class="toolbar-right">
+                    <button onclick="openDepartmentForm()" class="btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Add Department</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- DEPARTMENT MODAL / FORM -->
+            <div id="deptFormModal" class="modal-backdrop" onclick="handleDeptModalBackdropClick(event)">
+                <div id="departmentForm" class="department-form modal-dialog">
+                    <div class="modal-header">
+                        <div class="modal-title-wrapper">
+                            <span class="modal-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                                </svg>
+                            </span>
+                            <h3 id="deptFormTitle">Department Details</h3>
+                        </div>
+                        <button type="button" class="btn-close-modal" onclick="closeDepartmentForm()">&times;</button>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="departmentId">Department ID</label>
+                            <input type="number" id="departmentId" min="1" step="1" placeholder="e.g. 4">
+                        </div>
+                        <div class="form-field">
+                            <label for="departmentName">Department Name</label>
+                            <input type="text" id="departmentName" placeholder="e.g. Marketing">
+                        </div>
+                        <div id="departmentCustomFields" class="custom-fields-grid"></div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" onclick="closeDepartmentForm()" class="btn-secondary cancel">
+                            Cancel
+                        </button>
+                        <button type="button" onclick="saveDepartment()" class="btn-primary">
+                            Save Department
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DEPARTMENTS TABLE WITH CURRENT HEAD COLUMN -->
+            <div class="table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr id="departmentTableHeaders">
+                            <th>Department ID</th>
+                            <th>Department Name</th>
+                            <th>Current Head</th>
+                            <th>Total Employees</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="departmentTable"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Context variables -->
+    <script>
+        window.serverRole = "{{ role }}";
+        window.serverDepartment = "{{ department or '' }}";
+        window.serverUsername = "{{ username }}";
+    </script>
+    <script src="static/script.js"></script>
+</body>
+
+</html>
