@@ -190,7 +190,7 @@
                             <h3>Direct SQL Execution</h3>
                         </div>
                         <span class="allowed-tables-pill"
-                            title="Modifications strictly restricted to EMPLOYEES and DEPARTMENTS tables">
+                            title="Only added columns can be modified or dropped. Tables and built-in columns are protected.">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.5">
                                 <circle cx="12" cy="12" r="10"></circle>
@@ -200,11 +200,12 @@
                         </span>
                     </div>
 
-                    <textarea id="sqlCommand" rows="6" placeholder="-- Execute Oracle SQL commands here:
--- Note: Terminal modifications are strictly permitted on EMPLOYEES and DEPARTMENTS tables only.
-SELECT * FROM EMPLOYEES;
-SELECT * FROM DEPARTMENTS;
-UPDATE EMPLOYEES SET SALARY = SALARY + 500 WHERE DEPARTMENT = 'HR';"></textarea>
+                    <textarea id="sqlCommand" rows="6" placeholder="-- Queries and DML: EMPLOYEES / DEPARTMENTS only.
+-- DDL: add, modify, or drop user-added columns only.
+-- Tables and original columns cannot be dropped or changed.
+ALTER TABLE EMPLOYEES ADD CUSTOM_FIELD VARCHAR2(100);
+ALTER TABLE EMPLOYEES MODIFY CUSTOM_FIELD VARCHAR2(200);
+ALTER TABLE EMPLOYEES DROP COLUMN CUSTOM_FIELD;"></textarea>
 
                     <div class="terminal-actions">
                         <button onclick="runSQL()" class="btn-execute">
@@ -330,6 +331,7 @@ UPDATE EMPLOYEES SET SALARY = SALARY + 500 WHERE DEPARTMENT = 'HR';"></textarea>
                             <label for="hire_date">Date of Hire</label>
                             <input type="date" id="hire_date">
                         </div>
+                        <div id="employeeCustomFields" class="custom-fields-grid"></div>
                     </div>
 
                     <div class="modal-footer">
@@ -347,7 +349,7 @@ UPDATE EMPLOYEES SET SALARY = SALARY + 500 WHERE DEPARTMENT = 'HR';"></textarea>
             <div class="table-container">
                 <table class="modern-table">
                     <thead>
-                        <tr>
+                        <tr id="employeeTableHeaders">
                             <th>ID</th>
                             <th>Employee Name</th>
                             <th>Email</th>
@@ -416,6 +418,7 @@ UPDATE EMPLOYEES SET SALARY = SALARY + 500 WHERE DEPARTMENT = 'HR';"></textarea>
                             <label for="departmentName">Department Name</label>
                             <input type="text" id="departmentName" placeholder="e.g. Marketing">
                         </div>
+                        <div id="departmentCustomFields" class="custom-fields-grid"></div>
                     </div>
 
                     <div class="modal-footer">
@@ -433,7 +436,7 @@ UPDATE EMPLOYEES SET SALARY = SALARY + 500 WHERE DEPARTMENT = 'HR';"></textarea>
             <div class="table-container">
                 <table class="modern-table">
                     <thead>
-                        <tr>
+                        <tr id="departmentTableHeaders">
                             <th>Department ID</th>
                             <th>Department Name</th>
                             <th>Current Head</th>

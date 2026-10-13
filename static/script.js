@@ -7,6 +7,10 @@ let editingId = null;
 let editingDepartmentName = null;
 let allEmployees = [];
 let allDepartments = [];
+let customEmployeeColumns = [];
+let customDepartmentColumns = [];
+let customEmployeeColumnTypes = {};
+let customDepartmentColumnTypes = {};
 
 // ==========================================================================
 // TOAST NOTIFICATIONS
@@ -102,14 +106,17 @@ function getInitials(firstName, lastName) {
 async function loadEmployees() {
     try {
         const response = await fetch("/api/employees");
-        const employees = await response.json();
+        const data = await response.json();
 
-        if (employees.error) {
-            showToast(employees.error, "error");
+        if (data.error) {
+            showToast(data.error, "error");
             return;
         }
 
-        allEmployees = Array.isArray(employees) ? employees : [];
+        allEmployees = Array.isArray(data.employees) ? data.employees : [];
+        customEmployeeColumns = Array.isArray(data.custom_columns) ? data.custom_columns : [];
+        customEmployeeColumnTypes = data.custom_column_types || {};
+        syncCustomColumnHeaders("employeeTableHeaders", customEmployeeColumns);
 
         updateEmployeeStats();
         renderEmployeeTable(allEmployees);
@@ -117,6 +124,78 @@ async function loadEmployees() {
         console.error("Failed to load employees:", err);
         showToast("Network error loading employees.", "error");
     }
+}
+
+function syncCustomColumnHeaders(headerRowId, columnNames) {
+    const headerRow = document.getElementById(headerRowId);
+    if (!headerRow) return;
+
+    headerRow.querySelectorAll("th[data-custom-column]").forEach(header => header.remove());
+    const actionHeader = headerRow.querySelector("th.text-right");
+    columnNames.forEach(columnName => {
+        const header = document.createElement("th");
+        header.dataset.customColumn = columnName;
+        header.textContent = columnName;
+        headerRow.insertBefore(header, actionHeader);
+    });
+}
+
+function renderCustomFields(containerId, columnNames, columnTypes, values = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.replaceChildren();
+    columnNames.forEach((columnName, index) => {
+        const field = document.createElement("div");
+        field.className = "form-field";
+
+        const inputId = `${containerId}-${index}`;
+        const label = document.createElement("label");
+        label.htmlFor = inputId;
+        label.textContent = columnName;
+
+        const input = document.createElement("input");
+        const columnType = String(columnTypes[columnName] || "").toUpperCase();
+        if (columnType === "DATE") {
+            input.type = "date";
+        } else if (["NUMBER", "FLOAT", "BINARY_FLOAT", "BINARY_DOUBLE"].includes(columnType)) {
+            input.type = "number";
+            input.step = "any";
+        } else if (columnType.startsWith("TIMESTAMP")) {
+            input.type = "datetime-local";
+            input.step = "1";
+        } else {
+            input.type = "text";
+        }
+        input.id = inputId;
+        input.dataset.customColumnInput = columnName;
+        const value = values[columnName];
+        if (value !== null && value !== undefined) {
+            const inputValue = String(value);
+            if (input.type === "date") {
+                input.value = inputValue.slice(0, 10);
+            } else if (input.type === "datetime-local") {
+                input.value = inputValue.replace(" ", "T").slice(0, 19);
+            } else {
+                input.value = inputValue;
+            }
+        }
+
+        field.append(label, input);
+        container.appendChild(field);
+    });
+}
+
+function collectCustomFields(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return {};
+
+    return Object.fromEntries(
+        Array.from(container.querySelectorAll("[data-custom-column-input]"), input => [
+            input.dataset.customColumnInput,
+            input.value
+        ])
+    );
 }
 
 function updateEmployeeStats() {
@@ -163,7 +242,7 @@ function renderEmployeeTable(employees) {
     if (employees.length === 0) {
         const emptyRow = document.createElement("tr");
         emptyRow.innerHTML = `
-            <td colspan="11" style="text-align: center; padding: 40px; color: var(--text-dim);">
+                <td colspan="${11 + customEmployeeColumns.length}" style="text-align: center; padding: 40px; color: var(--text-dim);">
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <span>No employee records match the filter criteria.</span>
@@ -243,6 +322,14 @@ function renderEmployeeTable(employees) {
                 </div>
             </td>
         `;
+
+        const actionCell = row.querySelector("td.text-right");
+        customEmployeeColumns.forEach(columnName => {
+            const cell = document.createElement("td");
+            const value = employee.custom_fields ? employee.custom_fields[columnName] : null;
+            cell.textContent = value === null || value === undefined ? "-" : String(value);
+            row.insertBefore(cell, actionCell);
+        });
 
         table.appendChild(row);
     });
@@ -339,6 +426,7 @@ function clearForm() {
     document.getElementById("job_title").value = "";
     document.getElementById("salary").value = "";
     document.getElementById("hire_date").value = "";
+    renderCustomFields("employeeCustomFields", customEmployeeColumns, customEmployeeColumnTypes);
 }
 
 function editEmployee(employee) {
@@ -379,6 +467,12 @@ function editEmployee(employee) {
     document.getElementById("job_title").value = employee.job_title || "";
     document.getElementById("salary").value = employee.salary || "";
     document.getElementById("hire_date").value = employee.hire_date || "";
+    renderCustomFields(
+        "employeeCustomFields",
+        customEmployeeColumns,
+        customEmployeeColumnTypes,
+        employee.custom_fields || {}
+    );
 
     if (userRole !== "admin") {
         document.getElementById("department").disabled = true;
@@ -403,7 +497,8 @@ async function saveEmployee() {
         department: document.getElementById("department").value,
         job_title: document.getElementById("job_title").value.trim(),
         salary: Number(document.getElementById("salary").value) || 0,
-        hire_date: document.getElementById("hire_date").value
+        hire_date: document.getElementById("hire_date").value,
+        custom_fields: collectCustomFields("employeeCustomFields")
     };
 
     let response;
@@ -498,14 +593,17 @@ async function loadDepartments() {
 
     try {
         const response = await fetch("/api/departments");
-        const departments = await response.json();
+        const data = await response.json();
 
         if (!response.ok) {
-            showToast(departments.error || "Could not load departments.", "error");
+            showToast(data.error || "Could not load departments.", "error");
             return;
         }
 
-        allDepartments = Array.isArray(departments) ? departments : [];
+        allDepartments = Array.isArray(data.departments) ? data.departments : [];
+        customDepartmentColumns = Array.isArray(data.custom_columns) ? data.custom_columns : [];
+        customDepartmentColumnTypes = data.custom_column_types || {};
+        syncCustomColumnHeaders("departmentTableHeaders", customDepartmentColumns);
 
         // Update Stats
         const statDepts = document.getElementById("statTotalDepartments");
@@ -546,7 +644,7 @@ async function loadDepartments() {
         if (allDepartments.length === 0) {
             const emptyRow = document.createElement("tr");
             emptyRow.innerHTML = `
-                <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-dim);">
+                <td colspan="${5 + customDepartmentColumns.length}" style="text-align: center; padding: 30px; color: var(--text-dim);">
                     No departments created yet.
                 </td>
             `;
@@ -602,7 +700,7 @@ async function loadDepartments() {
                 <span>Edit</span>
             `;
             editButton.addEventListener("click", () =>
-                openDepartmentForm(department.name, department.id)
+                openDepartmentForm(department.name, department.id, department.custom_fields)
             );
 
             const deleteButton = document.createElement("button");
@@ -616,7 +714,14 @@ async function loadDepartments() {
             actionGroup.append(editButton, deleteButton);
             actionsCell.appendChild(actionGroup);
 
-            row.append(idCell, nameCell, headCell, employeeCountCell, actionsCell);
+            row.append(idCell, nameCell, headCell, employeeCountCell);
+            customDepartmentColumns.forEach(columnName => {
+                const customCell = document.createElement("td");
+                const value = department.custom_fields ? department.custom_fields[columnName] : null;
+                customCell.textContent = value === null || value === undefined ? "-" : String(value);
+                row.appendChild(customCell);
+            });
+            row.appendChild(actionsCell);
             table.appendChild(row);
         });
     } catch (err) {
@@ -625,7 +730,7 @@ async function loadDepartments() {
     }
 }
 
-function openDepartmentForm(departmentName = null, departmentId = null) {
+function openDepartmentForm(departmentName = null, departmentId = null, customFields = {}) {
     editingDepartmentName = departmentName;
 
     const idInput = document.getElementById("departmentId");
@@ -633,6 +738,12 @@ function openDepartmentForm(departmentName = null, departmentId = null) {
     idInput.disabled = departmentName !== null;
 
     document.getElementById("departmentName").value = departmentName || "";
+    renderCustomFields(
+        "departmentCustomFields",
+        customDepartmentColumns,
+        customDepartmentColumnTypes,
+        customFields || {}
+    );
 
     const titleElem = document.getElementById("deptFormTitle");
     if (titleElem) {
@@ -654,6 +765,7 @@ function closeDepartmentForm() {
     idInput.disabled = false;
 
     document.getElementById("departmentName").value = "";
+    renderCustomFields("departmentCustomFields", customDepartmentColumns, customDepartmentColumnTypes);
 
     const modal = document.getElementById("deptFormModal");
     if (modal) modal.classList.remove("active");
@@ -692,7 +804,11 @@ async function saveDepartment() {
         const response = await fetch(url, {
             method: isEditing ? "PUT" : "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id, name })
+            body: JSON.stringify({
+                id,
+                name,
+                custom_fields: collectCustomFields("departmentCustomFields")
+            })
         });
 
         const result = await response.json();
@@ -822,7 +938,7 @@ function renderSchemaTable(tableName) {
 
         html += `
         <tr>
-            <td class="schema-col-name">${escapeHtml(col.name)}</td>
+            <td class="schema-col-name">${escapeHtml(col.name)} (${col.custom ? "added" : "protected"})</td>
             <td class="schema-col-type">${escapeHtml(col.type)}</td>
             <td class="schema-col-null">${nullableBadge}</td>
             <td class="schema-col-default">${escapeHtml(col.default || "-")}</td>

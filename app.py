@@ -1,4 +1,6 @@
 import re
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from flask import Flask, render_template, request, redirect, session, jsonify
 from db import get_connection
 
@@ -138,6 +140,13 @@ def departments():
     cursor = connection.cursor()
 
     if request.method == "GET":
+        custom_metadata = _get_custom_column_metadata(cursor, "DEPARTMENTS")
+        custom_columns = [column["name"] for column in custom_metadata]
+        custom_column_types = {column["name"]: column["type"] for column in custom_metadata}
+        custom_select = ", ".join(
+            f'd."{column_name}"' for column_name in custom_columns
+        )
+        custom_select = f", {custom_select}" if custom_select else ""
         cursor.execute("""
             SELECT
                 d.DEPARTMENT_ID,
@@ -147,6 +156,7 @@ def departments():
                     FROM EMPLOYEES e    
                     WHERE UPPER(TRIM(e.DEPARTMENT)) = UPPER(TRIM(d.DEPARTMENT_NAME))
                 )
+                """ + custom_select + """
             FROM DEPARTMENTS d
             ORDER BY UPPER(d.DEPARTMENT_NAME)
         """)
@@ -178,12 +188,20 @@ def departments():
                 "name": dept_name,
                 "employee_count": employee_count,
                 "head": head_name,
-                "head_name": head_name
+                "head_name": head_name,
+                "custom_fields": {
+                    column_name: _json_safe_value(row[index + 3])
+                    for index, column_name in enumerate(custom_columns)
+                }
             })
 
         cursor.close()
         connection.close()
-        return jsonify(department_list)
+        return jsonify({
+            "departments": department_list,
+            "custom_columns": custom_columns,
+            "custom_column_types": custom_column_types
+        })
 
     data = request.get_json(silent=True) or {}
     department_id = data.get("id")
@@ -200,12 +218,26 @@ def departments():
         return jsonify({"error": "Department name is required."}), 400
 
     try:
-        cursor.execute("""
-            INSERT INTO DEPARTMENTS (DEPARTMENT_ID, DEPARTMENT_NAME)
-            VALUES (:id, :name)
-        """, {"id": department_id, "name": department_name})
+        custom_metadata, custom_values = _custom_fields_for_request(cursor, "DEPARTMENTS", data)
+        custom_column_sql = "".join(
+            f", {_quote_identifier(column['name'])}"
+            for column in custom_metadata
+        )
+        custom_bind_sql = "".join(
+            f", :custom_{index}"
+            for index in range(len(custom_metadata))
+        )
+        bindings = {"id": department_id, "name": department_name}
+        bindings.update({f"custom_{index}": value for index, value in enumerate(custom_values)})
+        cursor.execute(f"""
+            INSERT INTO DEPARTMENTS (DEPARTMENT_ID, DEPARTMENT_NAME{custom_column_sql})
+            VALUES (:id, :name{custom_bind_sql})
+        """, bindings)
         connection.commit()
         return jsonify({"message": "Department added successfully."})
+    except ValueError as error:
+        connection.rollback()
+        return jsonify({"error": str(error)}), 400
     except Exception as error:
         connection.rollback()
         return jsonify({"error": str(error)}), 409
@@ -236,11 +268,18 @@ def department_detail(department_name):
             return jsonify({"error": "Department name is required."}), 400
 
         try:
-            cursor.execute("""
+            custom_metadata, custom_values = _custom_fields_for_request(cursor, "DEPARTMENTS", data)
+            custom_set_sql = "".join(
+                f", {_quote_identifier(column['name'])} = :custom_{index}"
+                for index, column in enumerate(custom_metadata)
+            )
+            bindings = {"new_name": new_name, "old_name": department_name}
+            bindings.update({f"custom_{index}": value for index, value in enumerate(custom_values)})
+            cursor.execute(f"""
                 UPDATE DEPARTMENTS
-                SET DEPARTMENT_NAME = :new_name
+                SET DEPARTMENT_NAME = :new_name{custom_set_sql}
                 WHERE UPPER(DEPARTMENT_NAME) = UPPER(:old_name)
-            """, {"new_name": new_name, "old_name": department_name})
+            """, bindings)
 
             if cursor.rowcount == 0:
                 connection.rollback()
@@ -253,6 +292,9 @@ def department_detail(department_name):
             """, {"new_name": new_name, "old_name": department_name})
             connection.commit()
             return jsonify({"message": "Department updated successfully."})
+        except ValueError as error:
+            connection.rollback()
+            return jsonify({"error": str(error)}), 400
         except Exception as error:
             connection.rollback()
             return jsonify({"error": str(error)}), 409
@@ -309,45 +351,33 @@ def get_employees():
 
     connection = get_connection()
     cursor = connection.cursor()
+    custom_metadata = _get_custom_column_metadata(cursor, "EMPLOYEES")
+    custom_columns = [column["name"] for column in custom_metadata]
+    custom_column_types = {column["name"]: column["type"] for column in custom_metadata}
+    custom_select = ", ".join(f'"{column_name}"' for column_name in custom_columns)
+    custom_select = f", {custom_select}" if custom_select else ""
+    select_sql = """
+        SELECT
+            EMPLOYEE_ID,
+            FIRST_NAME,
+            LAST_NAME,
+            EMAIL,
+            PHONE,
+            DEPARTMENT,
+            JOB_TITLE,
+            SALARY,
+            TO_CHAR(HIRE_DATE, 'DD-MM-YYYY')
+            """ + custom_select + """
+        FROM EMPLOYEES
+    """
 
-    # Administrator can see everybody
     if session["role"] == "admin":
-
-        cursor.execute("""
-            SELECT
-                EMPLOYEE_ID,
-                FIRST_NAME,
-                LAST_NAME,
-                EMAIL,
-                PHONE,
-                DEPARTMENT,
-                JOB_TITLE,
-                SALARY,
-                TO_CHAR(HIRE_DATE, 'DD-MM-YYYY')
-            FROM EMPLOYEES
-            ORDER BY EMPLOYEE_ID
-        """)
-
-    # Department head can see only their department
+        cursor.execute(select_sql + " ORDER BY EMPLOYEE_ID")
     else:
-
-        cursor.execute("""
-            SELECT
-                EMPLOYEE_ID,
-                FIRST_NAME,
-                LAST_NAME,
-                EMAIL,
-                PHONE,
-                DEPARTMENT,
-                JOB_TITLE,
-                SALARY,
-                TO_CHAR(HIRE_DATE, 'DD-MM-YYYY')
-            FROM EMPLOYEES
-            WHERE UPPER(DEPARTMENT) = UPPER(:department)
-            ORDER BY EMPLOYEE_ID
-        """, {
-            "department": session["department"]
-        })
+        cursor.execute(
+            select_sql + " WHERE UPPER(DEPARTMENT) = UPPER(:department) ORDER BY EMPLOYEE_ID",
+            {"department": session["department"]}
+        )
 
     employees = []
 
@@ -362,13 +392,21 @@ def get_employees():
             "department": row[5],
             "job_title": row[6],
             "salary": row[7],
-            "hire_date": row[8]
+            "hire_date": row[8],
+            "custom_fields": {
+                column_name: _json_safe_value(row[index + 9])
+                for index, column_name in enumerate(custom_columns)
+            }
         })
 
     cursor.close()
     connection.close()
 
-    return jsonify(employees)
+    return jsonify({
+        "employees": employees,
+        "custom_columns": custom_columns,
+        "custom_column_types": custom_column_types
+    })
 
 
 # ==========================================================
@@ -381,7 +419,7 @@ def add_employee():
     if not session.get("logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
 
-    data = request.json
+    data = request.get_json(silent=True) or {}
 
     # Department head cannot create employees
     # in another department.
@@ -396,51 +434,44 @@ def add_employee():
     connection = get_connection()
     cursor = connection.cursor()
 
-    cursor.execute("""
-        INSERT INTO EMPLOYEES
-        (
-            EMPLOYEE_ID,
-            FIRST_NAME,
-            LAST_NAME,
-            EMAIL,
-            PHONE,
-            DEPARTMENT,
-            JOB_TITLE,
-            SALARY,
-            HIRE_DATE
+    try:
+        custom_metadata, custom_values = _custom_fields_for_request(cursor, "EMPLOYEES", data)
+        custom_column_sql = "".join(
+            f", {_quote_identifier(column['name'])}"
+            for column in custom_metadata
         )
-        VALUES
-        (
-            :1,
-            :2,
-            :3,
-            :4,
-            :5,
-            :6,
-            :7,
-            :8,
-            TO_DATE(:9, 'YYYY-MM-DD')
+        custom_bind_sql = "".join(
+            f", :{index + 10}"
+            for index in range(len(custom_metadata))
         )
-    """, (
-        data["employee_id"],
-        data["first_name"],
-        data["last_name"],
-        data["email"],
-        data["phone"],
-        data["department"],
-        data["job_title"],
-        data["salary"],
-        data["hire_date"]
-    ))
-
-    connection.commit()
-
-    cursor.close()
-    connection.close()
-
-    return jsonify({
-        "message": "Employee added successfully"
-    })
+        cursor.execute(f"""
+            INSERT INTO EMPLOYEES
+            (
+                EMPLOYEE_ID, FIRST_NAME, LAST_NAME, EMAIL, PHONE,
+                DEPARTMENT, JOB_TITLE, SALARY, HIRE_DATE{custom_column_sql}
+            )
+            VALUES
+            (
+                :1, :2, :3, :4, :5, :6, :7, :8,
+                TO_DATE(:9, 'YYYY-MM-DD'){custom_bind_sql}
+            )
+        """, (
+            data["employee_id"], data["first_name"], data["last_name"],
+            data["email"], data["phone"], data["department"],
+            data["job_title"], data["salary"], data["hire_date"],
+            *custom_values
+        ))
+        connection.commit()
+        return jsonify({"message": "Employee added successfully"})
+    except ValueError as error:
+        connection.rollback()
+        return jsonify({"error": str(error)}), 400
+    except Exception as error:
+        connection.rollback()
+        return jsonify({"error": str(error)}), 409
+    finally:
+        cursor.close()
+        connection.close()
 
 
 # ==========================================================
@@ -453,10 +484,22 @@ def update_employee(employee_id):
     if not session.get("logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
 
-    data = request.json
+    data = request.get_json(silent=True) or {}
 
     connection = get_connection()
     cursor = connection.cursor()
+
+    try:
+        custom_metadata, custom_values = _custom_fields_for_request(cursor, "EMPLOYEES", data)
+    except ValueError as error:
+        cursor.close()
+        connection.close()
+        return jsonify({"error": str(error)}), 400
+
+    custom_set_sql = "".join(
+        f", {_quote_identifier(column['name'])} = :{index + 10}"
+        for index, column in enumerate(custom_metadata)
+    )
 
     # ------------------------------------------------------
     # Administrator can edit anyone
@@ -475,6 +518,7 @@ def update_employee(employee_id):
                 JOB_TITLE = :6,
                 SALARY = :7,
                 HIRE_DATE = TO_DATE(:8, 'YYYY-MM-DD')
+                """ + custom_set_sql + """
             WHERE EMPLOYEE_ID = :9
         """, (
             data["first_name"],
@@ -485,7 +529,8 @@ def update_employee(employee_id):
             data["job_title"],
             data["salary"],
             data["hire_date"],
-            employee_id
+            employee_id,
+            *custom_values
         ))
 
     # ------------------------------------------------------
@@ -546,6 +591,7 @@ def update_employee(employee_id):
                 JOB_TITLE = :5,
                 SALARY = :6,
                 HIRE_DATE = TO_DATE(:7, 'YYYY-MM-DD')
+                """ + custom_set_sql + """
             WHERE EMPLOYEE_ID = :8
             AND UPPER(DEPARTMENT) = UPPER(:9)
         """, (
@@ -557,7 +603,8 @@ def update_employee(employee_id):
             data["salary"],
             data["hire_date"],
             employee_id,
-            session["department"]
+            session["department"],
+            *custom_values
         ))
 
     connection.commit()
@@ -609,6 +656,79 @@ def delete_employee(employee_id):
 # ==========================================================
 
 ALLOWED_CONSOLE_TABLES = {"EMPLOYEES", "DEPARTMENTS"}
+BUILTIN_TABLE_COLUMNS = {
+    "EMPLOYEES": {
+        "EMPLOYEE_ID", "FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE",
+        "DEPARTMENT", "JOB_TITLE", "SALARY", "HIRE_DATE"
+    },
+    "DEPARTMENTS": {"DEPARTMENT_ID", "DEPARTMENT_NAME"}
+}
+
+
+def _get_custom_column_names(cur, table_name):
+    return [
+        column["name"]
+        for column in _get_custom_column_metadata(cur, table_name)
+    ]
+
+
+def _get_custom_column_metadata(cur, table_name):
+    cur.execute("""
+        SELECT column_name, data_type
+        FROM user_tab_columns
+        WHERE table_name = :tname
+        ORDER BY column_id
+    """, {"tname": table_name.upper()})
+    return [
+        {"name": row[0], "type": row[1]}
+        for row in cur.fetchall()
+        if row[0].upper() not in BUILTIN_TABLE_COLUMNS[table_name.upper()]
+    ]
+
+
+def _quote_identifier(identifier):
+    return '"' + identifier.replace('"', '""') + '"'
+
+
+def _custom_fields_for_request(cur, table_name, request_data):
+    raw_fields = request_data.get("custom_fields") or {}
+    if not isinstance(raw_fields, dict):
+        raise ValueError("Custom fields must be an object.")
+
+    metadata = _get_custom_column_metadata(cur, table_name)
+    values = []
+    for column in metadata:
+        raw_value = raw_fields.get(column["name"])
+        if raw_value is None or raw_value == "":
+            values.append(None)
+            continue
+
+        data_type = column["type"].upper()
+        try:
+            if data_type in ("NUMBER", "FLOAT", "BINARY_FLOAT", "BINARY_DOUBLE"):
+                values.append(Decimal(str(raw_value)))
+            elif data_type == "DATE":
+                values.append(datetime.strptime(str(raw_value), "%Y-%m-%d"))
+            elif data_type.startswith("TIMESTAMP"):
+                values.append(datetime.fromisoformat(str(raw_value).replace("Z", "+00:00")))
+            else:
+                values.append(str(raw_value))
+        except (InvalidOperation, ValueError) as error:
+            raise ValueError(f"Invalid value for custom column {column['name']}.") from error
+
+    return metadata, values
+
+
+def _json_safe_value(value):
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if hasattr(value, "read"):
+        value = value.read()
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
 
 
 def _fetch_table_schema(cur, table_name):
@@ -678,41 +798,85 @@ def _fetch_table_schema(cur, table_name):
     }
 
 
-def _validate_sql_allowed(sql):
+def _validate_sql_allowed(sql, cur=None):
     clean_sql = re.sub(r'--.*', '', sql)
     clean_sql = re.sub(r'/\*.*?\*/', '', clean_sql, flags=re.DOTALL).strip()
     if not clean_sql:
         return False, "Empty SQL statement."
 
     first_word = clean_sql.split()[0].upper()
+    if first_word == "DROP":
+        return False, "DROP commands are not allowed. Tables and original columns cannot be dropped."
+
     if first_word in ("SELECT", "WITH", "EXPLAIN", "DESC", "DESCRIBE"):
         return True, None
 
-    # Check target table for DML / DDL modifications
-    target_table = None
-    patterns = [
-        r'UPDATE\s+(?:ONLY\s+)?([A-Za-z0-9_".]+)',
-        r'INSERT\s+INTO\s+([A-Za-z0-9_".]+)',
-        r'DELETE\s+(?:FROM\s+)?([A-Za-z0-9_".]+)',
-        r'MERGE\s+INTO\s+([A-Za-z0-9_".]+)',
-        r'ALTER\s+TABLE\s+([A-Za-z0-9_".]+)',
-        r'TRUNCATE\s+TABLE\s+([A-Za-z0-9_".]+)',
-        r'DROP\s+TABLE\s+([A-Za-z0-9_".]+)',
-        r'CREATE\s+TABLE\s+([A-Za-z0-9_".]+)'
-    ]
+    alter_match = re.fullmatch(
+        r'ALTER\s+TABLE\s+([A-Za-z][A-Za-z0-9_$#]*)\s+'
+        r'(ADD|MODIFY|DROP)\s+(?:COLUMN\s+)?(.+)',
+        clean_sql,
+        re.IGNORECASE | re.DOTALL
+    )
+    if alter_match:
+        table_name = alter_match.group(1).upper()
+        operation = alter_match.group(2).upper()
+        definition = alter_match.group(3).strip()
 
-    for pat in patterns:
-        m = re.match(pat, clean_sql, re.IGNORECASE)
-        if m:
-            target_table = m.group(1)
-            break
+        if table_name not in ALLOWED_CONSOLE_TABLES:
+            return False, "ALTER is only permitted on EMPLOYEES and DEPARTMENTS."
 
-    if not target_table:
-        return False, "Changes are only permitted on the EMPLOYEES and DEPARTMENTS tables."
+        if definition.startswith("(") and definition.endswith(")"):
+            definition = definition[1:-1].strip()
 
-    table_name = target_table.split(".")[-1].replace('"', '').strip().upper()
+        identifier_match = re.match(
+            r'^([A-Za-z][A-Za-z0-9_$#]*)\b(.*)$', definition, re.DOTALL
+        )
+        if not identifier_match:
+            return False, "Use one unquoted column name per ALTER TABLE command."
+
+        column_name = identifier_match.group(1).upper()
+        remainder = identifier_match.group(2).strip()
+        if column_name in BUILTIN_TABLE_COLUMNS[table_name]:
+            return False, "Original application columns cannot be modified or dropped."
+
+        if operation == "DROP":
+            if remainder:
+                return False, "Drop one added column at a time using ALTER TABLE ... DROP COLUMN."
+        else:
+            supported_type = re.fullmatch(
+                r'(?:VARCHAR2|VARCHAR|NVARCHAR2|CHAR|NCHAR)\s*\(\s*\d+\s*(?:BYTE|CHAR)?\s*\)'
+                r'|NUMBER\s*(?:\(\s*\d+\s*(?:,\s*\d+\s*)?\))?'
+                r'|FLOAT\s*(?:\(\s*\d+\s*\))?'
+                r'|BINARY_FLOAT|BINARY_DOUBLE|DATE|CLOB|NCLOB|BLOB'
+                r'|TIMESTAMP\s*(?:\(\s*\d+\s*\))?(?:\s+WITH(?:\s+LOCAL)?\s+TIME\s+ZONE)?',
+                remainder,
+                re.IGNORECASE
+            )
+            if not supported_type:
+                return False, "Use a supported Oracle data type and alter only one column at a time."
+
+        if cur is not None:
+            custom_columns = {name.upper() for name in _get_custom_column_names(cur, table_name)}
+            if operation == "ADD" and column_name in custom_columns:
+                return False, "That added column already exists."
+            if operation in ("MODIFY", "DROP") and column_name not in custom_columns:
+                return False, "Only existing user-added columns can be modified or dropped."
+
+        return True, None
+
+    # Continue to allow DML against the two application tables.
+    target_match = re.match(
+        r'(?:UPDATE\s+(?:ONLY\s+)?|INSERT\s+INTO\s+|DELETE\s+(?:FROM\s+)?|MERGE\s+INTO\s+)'
+        r'([A-Za-z][A-Za-z0-9_$#]*)\b',
+        clean_sql,
+        re.IGNORECASE
+    )
+    if not target_match:
+        return False, "Only queries, DML on application tables, and supported ALTER TABLE column commands are allowed."
+
+    table_name = target_match.group(1).upper()
     if table_name not in ALLOWED_CONSOLE_TABLES:
-        return False, f"Changes are only permitted on the EMPLOYEES and DEPARTMENTS tables (attempted: {table_name})."
+        return False, "Changes are only permitted on the EMPLOYEES and DEPARTMENTS tables."
 
     return True, None
 
@@ -734,6 +898,12 @@ def db_schema():
 
     employees_schema = _fetch_table_schema(cur, "EMPLOYEES")
     departments_schema = _fetch_table_schema(cur, "DEPARTMENTS")
+    for table_name, table_schema in (
+        ("EMPLOYEES", employees_schema),
+        ("DEPARTMENTS", departments_schema)
+    ):
+        for column in table_schema["columns"]:
+            column["custom"] = column["name"].upper() not in BUILTIN_TABLE_COLUMNS[table_name]
 
     cur.close()
     conn.close()
@@ -851,6 +1021,10 @@ def execute_sql():
             clean_stmt = stmt.rstrip().rstrip(";").strip()
             if not clean_stmt:
                 continue
+
+            is_allowed, error_msg = _validate_sql_allowed(clean_stmt, cur)
+            if not is_allowed:
+                return jsonify({"error": error_msg}), 403
 
             cur.execute(clean_stmt)
             has_executed = True

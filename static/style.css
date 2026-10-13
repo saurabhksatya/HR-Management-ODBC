@@ -3,8 +3,9 @@
    ========================================================================== */
 
 :root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', Consolas, "Courier New", monospace;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
 
   /* Theme Surfaces (Light Mode) */
   --bg-base: #f8fafc;
@@ -43,8 +44,12 @@
 
   /* Elevation Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03), 0 0 0 1px #e2e8f0;
-  --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05), 0 0 0 1px #e2e8f0;
+  --shadow-card:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03),
+    0 0 0 1px #e2e8f0;
+  --shadow-modal:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05),
+    0 0 0 1px #e2e8f0;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -65,7 +70,8 @@
   padding: 0;
 }
 
-html, body {
+html,
+body {
   min-height: 100%;
 }
 
@@ -107,14 +113,22 @@ body {
 .orb-1 {
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(99, 102, 241, 0.08) 0%,
+    transparent 70%
+  );
   top: -150px;
   right: -100px;
 }
 .orb-2 {
   width: 450px;
   height: 450px;
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.06) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(14, 165, 233, 0.06) 0%,
+    transparent 70%
+  );
   bottom: -150px;
   left: -100px;
 }
@@ -144,7 +158,9 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 40px 36px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.08),
+    0 8px 10px -6px rgba(0, 0, 0, 0.04);
 }
 
 .login-brand {
@@ -209,9 +225,16 @@ body {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  75% { transform: translateX(6px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
 }
 
 .auth-form {
@@ -253,7 +276,9 @@ body {
   padding-left: 42px !important;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   width: 100%;
   padding: 11px 14px;
   background: #ffffff;
@@ -266,13 +291,16 @@ input, select, textarea {
   outline: none;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   border-color: var(--border-focus);
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
-input::placeholder, textarea::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--text-light);
 }
 
@@ -954,13 +982,21 @@ button.delete:hover {
   padding: 28px 30px;
   width: 100%;
   max-width: 640px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   box-shadow: var(--shadow-modal);
   animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: scale(0.96) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .modal-header {
@@ -1019,6 +1055,10 @@ button.delete:hover {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+}
+
+.custom-fields-grid {
+  display: contents;
 }
 
 .form-field {
@@ -1100,9 +1140,15 @@ button.delete:hover {
   border-radius: 50%;
 }
 
-.dot-red { background: #f43f5e; }
-.dot-yellow { background: #eab308; }
-.dot-green { background: #10b981; }
+.dot-red {
+  background: #f43f5e;
+}
+.dot-yellow {
+  background: #eab308;
+}
+.dot-green {
+  background: #10b981;
+}
 
 .console-title {
   font-size: 13.5px;
@@ -1421,7 +1467,9 @@ button.delete:hover {
   border-radius: var(--radius-md);
   background: #ffffff;
   border: 1px solid var(--border-medium);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.05);
   color: var(--text-main);
   font-size: 13px;
   max-width: 360px;
@@ -1430,8 +1478,14 @@ button.delete:hover {
 }
 
 @keyframes toastSlideIn {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .toast.toast-success {
@@ -1486,7 +1540,8 @@ button.delete:hover {
   .toolbar-right {
     width: 100%;
   }
-  .search-box, .select-filter {
+  .search-box,
+  .select-filter {
     width: 100%;
   }
 }
